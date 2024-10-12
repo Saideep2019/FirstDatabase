@@ -4,7 +4,6 @@ import java.sql.SQLException;
 import java.util.Scanner;
 import simpleDatabase.Article; // Adjust this line according to your package structure
 
-
 public class StartCSE360 {
 
     private static DatabaseHelper databaseHelper;
@@ -13,16 +12,11 @@ public class StartCSE360 {
     public static void main(String[] args) {
         try {
             databaseHelper = new DatabaseHelper();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        try {
             databaseHelper.connectToDatabase();  // Connect to the database
 
             // Check if the database is empty (no users registered)
             if (databaseHelper.isDatabaseEmpty()) {
                 System.out.println("In-Memory Database is empty");
-                // Setup administrator access
                 setupAdministrator();
             } else {
                 System.out.println("If you are an administrator, then select A\nIf you are a user then select U\nEnter your choice:  ");
@@ -115,9 +109,11 @@ public class StartCSE360 {
             System.out.println("Article Management Menu:");
             System.out.println("1. Create Article");
             System.out.println("2. View Articles");
-            System.out.println("3. Edit Article");
-            System.out.println("4. Delete Article");
-            System.out.println("5. Exit Article Management");
+            System.out.println("3. Delete Article");
+            System.out.println("4. Delete All Articles");
+            System.out.println("5. Backup Articles");
+            System.out.println("6. Restore Articles");
+            System.out.println("7. Exit Article Management");
             System.out.print("Enter your choice: ");
             String choice = scanner.nextLine();
 
@@ -126,19 +122,60 @@ public class StartCSE360 {
                     createArticle();
                     break;
                 case "2":
-                    viewArticles();
+                    databaseHelper.displayArticles();
                     break;
                 case "3":
-                    editArticle();
-                    break;
-                case "4":
                     deleteArticle();
                     break;
+                case "4":
+                    deleteAllArticles();
+                    break;
                 case "5":
+                    backupArticles(); // Call method for backing up articles
+                    break;
+                case "6":
+                    restoreArticles(); // Call method for restoring articles
+                    break;
+                case "7":
                     return; // Exit article management
                 default:
                     System.out.println("Invalid choice. Please select a valid option.");
             }
+        }
+    }
+
+    // Method to handle article backup
+    private static void backupArticles() {
+        System.out.print("Enter backup file path (e.g., C:\\Users\\Saideep\\Documents\\article_backup.txt): ");
+        String backupFilePath = scanner.nextLine();
+        try {
+            databaseHelper.backupArticles(backupFilePath);
+            System.out.println("Articles backed up successfully to: " + backupFilePath);
+        } catch (Exception e) {
+            System.out.println("Error backing up articles: " + e.getMessage());
+        }
+    }
+
+    // Method to handle article restoration
+    private static void restoreArticles() {
+        System.out.print("Enter restore file path (e.g., C:\\Users\\Saideep\\Documents\\article_backup.txt): ");
+        String restoreFilePath = scanner.nextLine();
+        try {
+            databaseHelper.restoreArticles(restoreFilePath);
+            System.out.println("Articles restored successfully from: " + restoreFilePath);
+        } catch (Exception e) {
+            System.out.println("Error restoring articles: " + e.getMessage());
+        }
+    }
+
+    private static void deleteAllArticles() throws Exception {
+        System.out.print("Are you sure you want to delete all articles? (yes/no): ");
+        String confirmation = scanner.nextLine();
+        if (confirmation.equalsIgnoreCase("yes")) {
+            databaseHelper.deleteAllArticles();
+            System.out.println("All articles deleted successfully.");
+        } else {
+            System.out.println("Deletion canceled.");
         }
     }
 
@@ -156,59 +193,11 @@ public class StartCSE360 {
         System.out.print("Enter References (comma separated): ");
         String references = scanner.nextLine();
 
+        
+        
+        
         databaseHelper.createArticle(title, authors, abstractText, keywords, body, references);
         System.out.println("Article created successfully.");
-    }
-
-    private static void viewArticles() throws Exception {
-        System.out.println("Currently stored articles:");
-        databaseHelper.displayArticles(); // Call the method to display all articles
-    }
-
-    private static void editArticle() throws Exception {
-        System.out.print("Enter Article ID to edit: ");
-        int articleId = Integer.parseInt(scanner.nextLine());
-
-        // Display existing article data to the user
-        // Fetch the article data from the database
-        Article article = databaseHelper.getArticleById(articleId);
-        if (article != null) {
-            System.out.println("Current Title: " + article.getTitle());
-            System.out.print("Enter new Title (leave empty to keep current): ");
-            String newTitle = scanner.nextLine();
-            if (!newTitle.isEmpty()) article.setTitle(newTitle);
-
-            System.out.println("Current Authors: " + article.getAuthors());
-            System.out.print("Enter new Authors (leave empty to keep current): ");
-            String newAuthors = scanner.nextLine();
-            if (!newAuthors.isEmpty()) article.setAuthors(newAuthors);
-
-            System.out.println("Current Abstract: " + article.getAbstractText());
-            System.out.print("Enter new Abstract (leave empty to keep current): ");
-            String newAbstract = scanner.nextLine();
-            if (!newAbstract.isEmpty()) article.setAbstractText(newAbstract);
-
-            System.out.println("Current Keywords: " + article.getKeywords());
-            System.out.print("Enter new Keywords (leave empty to keep current): ");
-            String newKeywords = scanner.nextLine();
-            if (!newKeywords.isEmpty()) article.setKeywords(newKeywords);
-
-            System.out.println("Current Body: " + article.getBody());
-            System.out.print("Enter new Body (leave empty to keep current): ");
-            String newBody = scanner.nextLine();
-            if (!newBody.isEmpty()) article.setBody(newBody);
-
-            System.out.println("Current References: " + article.getReferences());
-            System.out.print("Enter new References (leave empty to keep current): ");
-            String newReferences = scanner.nextLine();
-            if (!newReferences.isEmpty()) article.setReferences(newReferences);
-
-            // Update the article in the database
-            databaseHelper.updateArticle(articleId, article);
-            System.out.println("Article updated successfully.");
-        } else {
-            System.out.println("Article not found.");
-        }
     }
 
     private static void deleteArticle() throws Exception {

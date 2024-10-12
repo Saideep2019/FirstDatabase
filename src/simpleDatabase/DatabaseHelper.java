@@ -1,8 +1,17 @@
 package simpleDatabase;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.*;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.List;
+
 import Encryption.EncryptionHelper;
 import Encryption.EncryptionUtils;
 
@@ -22,7 +31,12 @@ class DatabaseHelper {
 
     public DatabaseHelper() throws Exception {
         encryptionHelper = new EncryptionHelper();
+        
     }
+    
+    
+    
+    
     
     
     
@@ -51,7 +65,7 @@ class DatabaseHelper {
 
         return article; // Returns null if not found
     }
-    
+   
     
     
     
@@ -91,6 +105,22 @@ class DatabaseHelper {
             System.err.println("JDBC Driver not found: " + e.getMessage());
         }
     }
+    
+    
+    
+    public void deleteAllArticles() throws SQLException {
+        String sql = "DELETE FROM articles"; // Replace "articles" with your actual table name
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            int rowsAffected = preparedStatement.executeUpdate();
+            System.out.println(rowsAffected + " articles deleted.");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new SQLException("Error deleting all articles", e);
+        }
+    }
+
+
+    
 
     private void createTables() throws SQLException {
         // User table creation
@@ -173,6 +203,10 @@ class DatabaseHelper {
             Arrays.fill(decryptedPassword, '0'); // Clear sensitive data
         } 
     }
+    
+    
+    
+    
 
     // Method to create an article
     public void createArticle(String title, String authors, String abstractText, String keywords, String body, String references) throws SQLException {
@@ -222,6 +256,81 @@ class DatabaseHelper {
             pstmt.executeUpdate();
         }
     }
+    
+    
+    
+    
+ // Method to restore all articles from a CSV file
+    public void restoreArticles(String backupFilePath) throws SQLException {
+        try (BufferedReader br = new BufferedReader(new FileReader(backupFilePath))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] fields = line.split(","); // Assuming fields are separated by commas
+                if (fields.length < 6) continue; // Skip invalid lines
+
+                String title = fields[0];
+                String authors = fields[1];
+                String abstractText = fields[2];
+                String keywords = fields[3];
+                String body = fields[4];
+                String references = fields[5];
+
+                // Check if the article already exists
+                if (!articleExists(title)) { // You need to implement this method
+                    createArticle(title, authors, abstractText, keywords, body, references);
+                } else {
+                    System.out.println("Article with title \"" + title + "\" already exists. Skipping...");
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new SQLException("Error restoring articles: " + e.getMessage());
+        }
+    }
+    
+    public void backupArticles(String backupFilePath) {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(backupFilePath))) {
+            String sql = "SELECT title, authors, abstract, keywords, body, references FROM articles";
+            try (Statement stmt = connection.createStatement();
+                 ResultSet rs = stmt.executeQuery(sql)) {
+                while (rs.next()) {
+                    String title = rs.getString("title");
+                    String authors = rs.getString("authors");
+                    String abstractText = rs.getString("abstract");
+                    String keywords = rs.getString("keywords");
+                    String body = rs.getString("body");
+                    String references = rs.getString("references");
+
+                    // Write to the backup file, omitting the ID
+                    bw.write(title + "," + authors + "," + abstractText + "," + keywords + "," + body + "," + references);
+                    bw.newLine();
+                }
+            } catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.out.println("Error backing up articles: " + e.getMessage());
+        }
+    }
+
+    
+
+    
+    private boolean articleExists(String title) throws SQLException {
+        String query = "SELECT COUNT(*) FROM articles WHERE title = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+            pstmt.setString(1, title);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1) > 0; // Returns true if count is greater than 0
+            }
+        }
+        return false; // Default to false if any exception occurs
+    }
+    
+
 
     // Method to close the database connection
     public void closeConnection() {
