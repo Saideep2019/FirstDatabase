@@ -2,36 +2,43 @@ package simpleDatabase;
 
 import java.sql.SQLException;
 import java.util.Scanner;
-import simpleDatabase.Article; // Adjust this line according to your package structure
 
 public class StartCSE360 {
 
     private static DatabaseHelper databaseHelper;
     private static final Scanner scanner = new Scanner(System.in);
+    
+    private static final String ADMIN_ROLE = "admin";
+    private static final String USER_ROLE = "user";
+    private static final String USER_CHOICE_REGISTER = "1";
+    private static final String USER_CHOICE_LOGIN = "2";
+    private static final String USER_CHOICE_MANAGE_ARTICLES = "3";
+    
+    private static final String ADMIN_CHOICE = "A";
+    private static final String USER_CHOICE = "U";
 
     public static void main(String[] args) {
         try {
             databaseHelper = new DatabaseHelper();
-            databaseHelper.connectToDatabase();  // Connect to the database
+            databaseHelper.connectToDatabase();
 
-            // Check if the database is empty (no users registered)
             if (databaseHelper.isDatabaseEmpty()) {
                 System.out.println("In-Memory Database is empty");
                 setupAdministrator();
             } else {
                 System.out.println("If you are an administrator, then select A\nIf you are a user then select U\nEnter your choice:  ");
-                String role = scanner.nextLine();
+                String role = scanner.nextLine().trim().toUpperCase();
 
                 switch (role) {
-                    case "U":
+                    case USER_CHOICE:
                         userFlow();
                         break;
-                    case "A":
+                    case ADMIN_CHOICE:
                         adminFlow();
                         break;
                     default:
                         System.out.println("Invalid choice. Please select 'A' or 'U'");
-                        databaseHelper.closeConnection();
+                        break;
                 }
             }
         } catch (SQLException e) {
@@ -48,27 +55,25 @@ public class StartCSE360 {
 
     private static void setupAdministrator() throws Exception {
         System.out.println("Setting up the Administrator access.");
-        System.out.print("Enter Admin Email: ");
-        String email = scanner.nextLine();
-        System.out.print("Enter Admin Password: ");
-        String password = scanner.nextLine();
-        databaseHelper.register(email, password, "admin");
+        String email = promptUser("Enter Admin Email: ");
+        String password = promptUser("Enter Admin Password: ");
+        databaseHelper.register(email, password, ADMIN_ROLE);
         System.out.println("Administrator setup completed.");
     }
 
     private static void userFlow() throws Exception {
         System.out.println("User Flow");
         System.out.print("What would you like to do?\n1. Register\n2. Login\n3. Manage Articles\nEnter your choice: ");
-        String choice = scanner.nextLine();
+        String choice = scanner.nextLine().trim();
 
         switch (choice) {
-            case "1":
+            case USER_CHOICE_REGISTER:
                 registerUser();
                 break;
-            case "2":
+            case USER_CHOICE_LOGIN:
                 loginUser();
                 break;
-            case "3":
+            case USER_CHOICE_MANAGE_ARTICLES:
                 articleFlow();
                 break;
             default:
@@ -77,14 +82,16 @@ public class StartCSE360 {
         }
     }
 
+    private static String promptUser(String message) {
+        System.out.print(message);
+        return scanner.nextLine().trim();
+    }
+
     private static void registerUser() throws Exception {
-        System.out.print("Enter User Email: ");
-        String email = scanner.nextLine();
-        System.out.print("Enter User Password: ");
-        String password = scanner.nextLine();
-        // Check if user already exists in the database
+        String email = promptUser("Enter User Email: ");
+        String password = promptUser("Enter User Password: ");
         if (!databaseHelper.doesUserExist(email)) {
-            databaseHelper.register(email, password, "user");
+            databaseHelper.register(email, password, USER_ROLE);
             System.out.println("User setup completed.");
         } else {
             System.out.println("User already exists.");
@@ -92,13 +99,11 @@ public class StartCSE360 {
     }
 
     private static void loginUser() throws Exception {
-        System.out.print("Enter User Email: ");
-        String email = scanner.nextLine();
-        System.out.print("Enter User Password: ");
-        String password = scanner.nextLine();
-        if (databaseHelper.login(email, password, "user")) {
+        String email = promptUser("Enter User Email: ");
+        String password = promptUser("Enter User Password: ");
+        if (databaseHelper.login(email, password, USER_ROLE)) {
             System.out.println("User login successful.");
-            // You can add more user functionalities here if needed.
+            // Additional user functionalities can be added here
         } else {
             System.out.println("Invalid user credentials. Try again!!");
         }
@@ -115,7 +120,7 @@ public class StartCSE360 {
             System.out.println("6. Restore Articles");
             System.out.println("7. Exit Article Management");
             System.out.print("Enter your choice: ");
-            String choice = scanner.nextLine();
+            String choice = scanner.nextLine().trim();
 
             switch (choice) {
                 case "1":
@@ -131,10 +136,10 @@ public class StartCSE360 {
                     deleteAllArticles();
                     break;
                 case "5":
-                    backupArticles(); // Call method for backing up articles
+                    backupArticles();
                     break;
                 case "6":
-                    restoreArticles(); // Call method for restoring articles
+                    restoreArticles();
                     break;
                 case "7":
                     return; // Exit article management
@@ -144,10 +149,8 @@ public class StartCSE360 {
         }
     }
 
-    // Method to handle article backup
     private static void backupArticles() {
-        System.out.print("Enter backup file path (e.g., C:\\Users\\Saideep\\Documents\\article_backup.txt): ");
-        String backupFilePath = scanner.nextLine();
+        String backupFilePath = promptUser("Enter backup file path (e.g., C:\\Users\\Saideep\\Documents\\article_backup.txt): ");
         try {
             databaseHelper.backupArticles(backupFilePath);
             System.out.println("Articles backed up successfully to: " + backupFilePath);
@@ -156,10 +159,8 @@ public class StartCSE360 {
         }
     }
 
-    // Method to handle article restoration
     private static void restoreArticles() {
-        System.out.print("Enter restore file path (e.g., C:\\Users\\Saideep\\Documents\\article_backup.txt): ");
-        String restoreFilePath = scanner.nextLine();
+        String restoreFilePath = promptUser("Enter restore file path (e.g., C:\\Users\\Saideep\\Documents\\article_backup.txt): ");
         try {
             databaseHelper.restoreArticles(restoreFilePath);
             System.out.println("Articles restored successfully from: " + restoreFilePath);
@@ -169,8 +170,7 @@ public class StartCSE360 {
     }
 
     private static void deleteAllArticles() throws Exception {
-        System.out.print("Are you sure you want to delete all articles? (yes/no): ");
-        String confirmation = scanner.nextLine();
+        String confirmation = promptUser("Are you sure you want to delete all articles? (yes/no): ");
         if (confirmation.equalsIgnoreCase("yes")) {
             databaseHelper.deleteAllArticles();
             System.out.println("All articles deleted successfully.");
@@ -180,33 +180,20 @@ public class StartCSE360 {
     }
 
     private static void createArticle() throws Exception {
-        System.out.print("Enter Title: ");
-        String title = scanner.nextLine();
-        System.out.print("Enter Authors (comma separated): ");
-        String authors = scanner.nextLine();
-        System.out.print("Enter Abstract: ");
-        String abstractText = scanner.nextLine();
-        System.out.print("Enter Keywords (comma separated): ");
-        String keywords = scanner.nextLine();
-        System.out.print("Enter Body: ");
-        String body = scanner.nextLine();
-        System.out.print("Enter References (comma separated): ");
-        String references = scanner.nextLine();
+        String title = promptUser("Enter Title: ");
+        String authors = promptUser("Enter Authors (comma separated): ");
+        String abstractText = promptUser("Enter Abstract: ");
+        String keywords = promptUser("Enter Keywords (comma separated): ");
+        String body = promptUser("Enter Body: ");
+        String references = promptUser("Enter References (comma separated): ");
 
-        
-        
-        
         databaseHelper.createArticle(title, authors, abstractText, keywords, body, references);
         System.out.println("Article created successfully.");
     }
 
     private static void deleteArticle() throws Exception {
-        System.out.print("Enter Article ID to delete: ");
-        int articleId = Integer.parseInt(scanner.nextLine());
-
-        // Confirm deletion
-        System.out.print("Are you sure you want to delete article with ID " + articleId + "? (y/n): ");
-        String confirm = scanner.nextLine();
+        int articleId = Integer.parseInt(promptUser("Enter Article ID to delete: "));
+        String confirm = promptUser("Are you sure you want to delete article with ID " + articleId + "? (y/n): ");
         if (confirm.equalsIgnoreCase("y")) {
             databaseHelper.deleteArticle(articleId);
             System.out.println("Article deleted successfully.");
@@ -217,11 +204,9 @@ public class StartCSE360 {
 
     private static void adminFlow() throws Exception {
         System.out.println("Admin Flow");
-        System.out.print("Enter Admin Email: ");
-        String email = scanner.nextLine();
-        System.out.print("Enter Admin Password: ");
-        String password = scanner.nextLine();
-        if (databaseHelper.login(email, password, "admin")) {
+        String email = promptUser("Enter Admin Email: ");
+        String password = promptUser("Enter Admin Password: ");
+        if (databaseHelper.login(email, password, ADMIN_ROLE)) {
             System.out.println("Admin login successful.");
             databaseHelper.displayUsersByAdmin();
         } else {

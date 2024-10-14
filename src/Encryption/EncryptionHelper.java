@@ -1,7 +1,9 @@
 package Encryption;
 
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.security.Security;
+import java.util.Arrays;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
@@ -28,14 +30,44 @@ public class EncryptionHelper {
 
     // Encrypt method: encrypts the plain text using AES/CBC/PKCS5Padding
     public byte[] encrypt(byte[] plainText, byte[] initializationVector) throws Exception {
+        // Initialize the cipher for encryption with the provided IV
         cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(initializationVector));
-        return cipher.doFinal(plainText);
+        
+        // Encrypt the data
+        byte[] encryptedData = cipher.doFinal(plainText);
+        
+        // Combine IV and encrypted data
+        byte[] combined = new byte[initializationVector.length + encryptedData.length];
+        System.arraycopy(initializationVector, 0, combined, 0, initializationVector.length);
+        System.arraycopy(encryptedData, 0, combined, initializationVector.length, encryptedData.length);
+        
+        return combined; // Return combined IV and encrypted data
     }
 
-    // Decrypt method: decrypts the ciphertext back to the original text
-    public byte[] decrypt(byte[] cipherText, byte[] initializationVector) throws Exception {
+    // Decrypt method
+    public byte[] decrypt(byte[] combined) throws Exception {
+        // Extract the IV
+        byte[] initializationVector = Arrays.copyOfRange(combined, 0, 16);
+        
+        // Extract the encrypted data
+        byte[] encryptedData = Arrays.copyOfRange(combined, 16, combined.length);
+        
+        // Initialize the cipher for decryption using the extracted IV
         cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(initializationVector));
-        return cipher.doFinal(cipherText);
+
+        // Decrypt the data
+        return cipher.doFinal(encryptedData);
+    }
+
+    public char[] decryptToCharArray(byte[] encryptedData, byte[] iv) throws Exception {
+        // Ensure the cipher and key are properly set up for decryption
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        IvParameterSpec ivParams = new IvParameterSpec(iv); // Create IV parameter spec
+        cipher.init(Cipher.DECRYPT_MODE, key, ivParams); // Initialize the cipher in decrypt mode
+
+        // Decrypt the data
+        byte[] decryptedData = cipher.doFinal(encryptedData); // Decrypt using the cipher
+        return new String(decryptedData, StandardCharsets.UTF_8).toCharArray(); // Convert decrypted bytes to char array
     }
 
     // Method to generate a random Initialization Vector (IV)
